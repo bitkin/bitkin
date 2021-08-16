@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 The Bitcoin Core developers
+// Copyright (c) 2020-2021 The Bitkincoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -97,6 +97,7 @@ public:
         return m_blocks.emplace_back(std::move(current_block)).get();
     }
 };
+} // namespace
 
 std::unique_ptr<const CChainParams> g_params;
 
@@ -109,7 +110,7 @@ void initialize()
 
 constexpr uint32_t MAX_START_TIME = 4102444800; // 2100-01-01
 
-FUZZ_TARGET_INIT(versionbits, initialize)
+void test_one_input(const std::vector<uint8_t>& buffer)
 {
     const CChainParams& params = *g_params;
     const int64_t interval = params.GetConsensus().nPowTargetSpacing;
@@ -347,4 +348,3 @@ FUZZ_TARGET_INIT(versionbits, initialize)
         assert(exp_since > 0 || exp_state == ThresholdState::DEFINED);
     }
 }
-} // namespace

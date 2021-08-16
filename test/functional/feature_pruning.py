@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2014-2020 The Bitcoin Core developers
+# Copyright (c) 2014-2020 The Bitkincoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test the pruning code.
@@ -11,13 +11,9 @@ This test takes 30 mins or more (up to 2 hours)
 import os
 
 from test_framework.blocktools import create_coinbase
-from test_framework.messages import CBlock
-from test_framework.script import (
-    CScript,
-    OP_NOP,
-    OP_RETURN,
-)
-from test_framework.test_framework import BitcoinTestFramework
+from test_framework.messages import CBlock, ToHex
+from test_framework.script import CScript, OP_RETURN, OP_NOP
+from test_framework.test_framework import BitkincoinTestFramework
 from test_framework.util import (
     assert_equal,
     assert_greater_than,
@@ -66,7 +62,7 @@ def mine_large_blocks(node, n):
         block.solve()
 
         # Submit to the node
-        node.submitblock(block.serialize().hex())
+        node.submitblock(ToHex(block))
 
         previousblockhash = block.sha256
         height += 1
@@ -75,7 +71,7 @@ def mine_large_blocks(node, n):
 def calc_usage(blockdir):
     return sum(os.path.getsize(blockdir + f) for f in os.listdir(blockdir) if os.path.isfile(os.path.join(blockdir, f))) / (1024. * 1024.)
 
-class PruneTest(BitcoinTestFramework):
+class PruneTest(BitkincoinTestFramework):
     def set_test_params(self):
         self.setup_clean_chain = True
         self.num_nodes = 6

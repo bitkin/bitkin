@@ -1,5 +1,5 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2020 The Bitcoin Core developers
+// Copyright (c) 2009-2020 The Bitkincoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -127,8 +127,6 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "gettxout", 1, "n" },
     { "gettxout", 2, "include_mempool" },
     { "gettxoutproof", 0, "txids" },
-    { "gettxoutsetinfo", 1, "hash_or_height" },
-    { "gettxoutsetinfo", 2, "use_index"},
     { "lockunspent", 0, "unlock" },
     { "lockunspent", 1, "transactions" },
     { "send", 0, "outputs" },
@@ -142,7 +140,6 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "importmulti", 0, "requests" },
     { "importmulti", 1, "options" },
     { "importdescriptors", 0, "requests" },
-    { "listdescriptors", 0, "private" },
     { "verifychain", 0, "checklevel" },
     { "verifychain", 1, "nblocks" },
     { "getblockstats", 0, "hash_or_height" },
@@ -186,8 +183,6 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "createwallet", 4, "avoid_reuse"},
     { "createwallet", 5, "descriptors"},
     { "createwallet", 6, "load_on_startup"},
-    { "createwallet", 7, "external_signer"},
-    { "restorewallet", 2, "load_on_startup"},
     { "loadwallet", 1, "load_on_startup"},
     { "unloadwallet", 1, "load_on_startup"},
     { "getnodeaddresses", 0, "count"},
@@ -215,9 +210,14 @@ public:
 
 CRPCConvertTable::CRPCConvertTable()
 {
-    for (const auto& cp : vRPCConvertParams) {
-        members.emplace(cp.methodName, cp.paramIdx);
-        membersByName.emplace(cp.methodName, cp.paramName);
+    const unsigned int n_elem =
+        (sizeof(vRPCConvertParams) / sizeof(vRPCConvertParams[0]));
+
+    for (unsigned int i = 0; i < n_elem; i++) {
+        members.insert(std::make_pair(vRPCConvertParams[i].methodName,
+                                      vRPCConvertParams[i].paramIdx));
+        membersByName.insert(std::make_pair(vRPCConvertParams[i].methodName,
+                                            vRPCConvertParams[i].paramName));
     }
 }
 

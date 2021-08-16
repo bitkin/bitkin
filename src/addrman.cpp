@@ -1,5 +1,5 @@
 // Copyright (c) 2012 Pieter Wuille
-// Copyright (c) 2012-2020 The Bitcoin Core developers
+// Copyright (c) 2012-2020 The Bitkincoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -7,13 +7,7 @@
 
 #include <hash.h>
 #include <logging.h>
-#include <netaddress.h>
 #include <serialize.h>
-
-#include <cmath>
-#include <optional>
-#include <unordered_map>
-#include <unordered_set>
 
 int CAddrInfo::GetTriedBucket(const uint256& nKey, const std::vector<bool> &asmap) const
 {
@@ -38,7 +32,7 @@ int CAddrInfo::GetNewBucket(const uint256& nKey, const CNetAddr& src, const std:
 
 int CAddrInfo::GetBucketPosition(const uint256 &nKey, bool fNew, int nBucket) const
 {
-    uint64_t hash1 = (CHashWriter(SER_GETHASH, 0) << nKey << (fNew ? uint8_t{'N'} : uint8_t{'K'}) << nBucket << GetKey()).GetCheapHash();
+    uint64_t hash1 = (CHashWriter(SER_GETHASH, 0) << nKey << (fNew ? 'N' : 'K') << nBucket << GetKey()).GetCheapHash();
     return hash1 % ADDRMAN_BUCKET_SIZE;
 }
 
@@ -79,14 +73,12 @@ double CAddrInfo::GetChance(int64_t nNow) const
 
 CAddrInfo* CAddrMan::Find(const CNetAddr& addr, int* pnId)
 {
-    AssertLockHeld(cs);
-
-    const auto it = mapAddr.find(addr);
+    std::map<CNetAddr, int>::iterator it = mapAddr.find(addr);
     if (it == mapAddr.end())
         return nullptr;
     if (pnId)
         *pnId = (*it).second;
-    const auto it2 = mapInfo.find((*it).second);
+    std::map<int, CAddrInfo>::iterator it2 = mapInfo.find((*it).second);
     if (it2 != mapInfo.end())
         return &(*it2).second;
     return nullptr;
@@ -94,8 +86,6 @@ CAddrInfo* CAddrMan::Find(const CNetAddr& addr, int* pnId)
 
 CAddrInfo* CAddrMan::Create(const CAddress& addr, const CNetAddr& addrSource, int* pnId)
 {
-    AssertLockHeld(cs);
-
     int nId = nIdCount++;
     mapInfo[nId] = CAddrInfo(addr, addrSource);
     mapAddr[addr] = nId;
@@ -106,10 +96,8 @@ CAddrInfo* CAddrMan::Create(const CAddress& addr, const CNetAddr& addrSource, in
     return &mapInfo[nId];
 }
 
-void CAddrMan::SwapRandom(unsigned int nRndPos1, unsigned int nRndPos2) const
+void CAddrMan::SwapRandom(unsigned int nRndPos1, unsigned int nRndPos2)
 {
-    AssertLockHeld(cs);
-
     if (nRndPos1 == nRndPos2)
         return;
 
@@ -118,13 +106,11 @@ void CAddrMan::SwapRandom(unsigned int nRndPos1, unsigned int nRndPos2) const
     int nId1 = vRandom[nRndPos1];
     int nId2 = vRandom[nRndPos2];
 
-    const auto it_1{mapInfo.find(nId1)};
-    const auto it_2{mapInfo.find(nId2)};
-    assert(it_1 != mapInfo.end());
-    assert(it_2 != mapInfo.end());
+    assert(mapInfo.count(nId1) == 1);
+    assert(mapInfo.count(nId2) == 1);
 
-    it_1->second.nRandomPos = nRndPos2;
-    it_2->second.nRandomPos = nRndPos1;
+    mapInfo[nId1].nRandomPos = nRndPos2;
+    mapInfo[nId2].nRandomPos = nRndPos1;
 
     vRandom[nRndPos1] = nId2;
     vRandom[nRndPos2] = nId1;
@@ -132,8 +118,6 @@ void CAddrMan::SwapRandom(unsigned int nRndPos1, unsigned int nRndPos2) const
 
 void CAddrMan::Delete(int nId)
 {
-    AssertLockHeld(cs);
-
     assert(mapInfo.count(nId) != 0);
     CAddrInfo& info = mapInfo[nId];
     assert(!info.fInTried);
@@ -148,8 +132,6 @@ void CAddrMan::Delete(int nId)
 
 void CAddrMan::ClearNew(int nUBucket, int nUBucketPos)
 {
-    AssertLockHeld(cs);
-
     // if there is an entry in the specified bucket, delete it.
     if (vvNew[nUBucket][nUBucketPos] != -1) {
         int nIdDelete = vvNew[nUBucket][nUBucketPos];
@@ -165,8 +147,6 @@ void CAddrMan::ClearNew(int nUBucket, int nUBucketPos)
 
 void CAddrMan::MakeTried(CAddrInfo& info, int nId)
 {
-    AssertLockHeld(cs);
-
     // remove the entry from all new buckets
     for (int bucket = 0; bucket < ADDRMAN_NEW_BUCKET_COUNT; bucket++) {
         int pos = info.GetBucketPosition(nKey, true, bucket);
@@ -215,8 +195,6 @@ void CAddrMan::MakeTried(CAddrInfo& info, int nId)
 
 void CAddrMan::Good_(const CService& addr, bool test_before_evict, int64_t nTime)
 {
-    AssertLockHeld(cs);
-
     int nId;
 
     nLastGood = nTime;
@@ -283,8 +261,6 @@ void CAddrMan::Good_(const CService& addr, bool test_before_evict, int64_t nTime
 
 bool CAddrMan::Add_(const CAddress& addr, const CNetAddr& source, int64_t nTimePenalty)
 {
-    AssertLockHeld(cs);
-
     if (!addr.IsRoutable())
         return false;
 
@@ -358,8 +334,6 @@ bool CAddrMan::Add_(const CAddress& addr, const CNetAddr& source, int64_t nTimeP
 
 void CAddrMan::Attempt_(const CService& addr, bool fCountFailure, int64_t nTime)
 {
-    AssertLockHeld(cs);
-
     CAddrInfo* pinfo = Find(addr);
 
     // if not found, bail out
@@ -380,11 +354,9 @@ void CAddrMan::Attempt_(const CService& addr, bool fCountFailure, int64_t nTime)
     }
 }
 
-CAddrInfo CAddrMan::Select_(bool newOnly) const
+CAddrInfo CAddrMan::Select_(bool newOnly)
 {
-    AssertLockHeld(cs);
-
-    if (vRandom.empty())
+    if (size() == 0)
         return CAddrInfo();
 
     if (newOnly && nNew == 0)
@@ -403,9 +375,8 @@ CAddrInfo CAddrMan::Select_(bool newOnly) const
                 nKBucketPos = (nKBucketPos + insecure_rand.randbits(ADDRMAN_BUCKET_SIZE_LOG2)) % ADDRMAN_BUCKET_SIZE;
             }
             int nId = vvTried[nKBucket][nKBucketPos];
-            const auto it_found{mapInfo.find(nId)};
-            assert(it_found != mapInfo.end());
-            const CAddrInfo& info{it_found->second};
+            assert(mapInfo.count(nId) == 1);
+            CAddrInfo& info = mapInfo[nId];
             if (insecure_rand.randbits(30) < fChanceFactor * info.GetChance() * (1 << 30))
                 return info;
             fChanceFactor *= 1.2;
@@ -421,9 +392,8 @@ CAddrInfo CAddrMan::Select_(bool newOnly) const
                 nUBucketPos = (nUBucketPos + insecure_rand.randbits(ADDRMAN_BUCKET_SIZE_LOG2)) % ADDRMAN_BUCKET_SIZE;
             }
             int nId = vvNew[nUBucket][nUBucketPos];
-            const auto it_found{mapInfo.find(nId)};
-            assert(it_found != mapInfo.end());
-            const CAddrInfo& info{it_found->second};
+            assert(mapInfo.count(nId) == 1);
+            CAddrInfo& info = mapInfo[nId];
             if (insecure_rand.randbits(30) < fChanceFactor * info.GetChance() * (1 << 30))
                 return info;
             fChanceFactor *= 1.2;
@@ -431,18 +401,11 @@ CAddrInfo CAddrMan::Select_(bool newOnly) const
     }
 }
 
-int CAddrMan::Check_() const
+#ifdef DEBUG_ADDRMAN
+int CAddrMan::Check_()
 {
-    AssertLockHeld(cs);
-
-    // Run consistency checks 1 in m_consistency_check_ratio times if enabled
-    if (m_consistency_check_ratio == 0) return 0;
-    if (insecure_rand.randrange(m_consistency_check_ratio) >= 1) return 0;
-
-    LogPrint(BCLog::ADDRMAN, "Addrman checks started: new %i, tried %i, total %u\n", nNew, nTried, vRandom.size());
-
-    std::unordered_set<int> setTried;
-    std::unordered_map<int, int> mapNew;
+    std::set<int> setTried;
+    std::map<int, int> mapNew;
 
     if (vRandom.size() != (size_t)(nTried + nNew))
         return -7;
@@ -463,10 +426,8 @@ int CAddrMan::Check_() const
                 return -4;
             mapNew[n] = info.nRefCount;
         }
-        const auto it{mapAddr.find(info)};
-        if (it == mapAddr.end() || it->second != n) {
+        if (mapAddr[info] != n)
             return -5;
-        }
         if (info.nRandomPos < 0 || (size_t)info.nRandomPos >= vRandom.size() || vRandom[info.nRandomPos] != n)
             return -14;
         if (info.nLastTry < 0)
@@ -482,18 +443,15 @@ int CAddrMan::Check_() const
 
     for (int n = 0; n < ADDRMAN_TRIED_BUCKET_COUNT; n++) {
         for (int i = 0; i < ADDRMAN_BUCKET_SIZE; i++) {
-            if (vvTried[n][i] != -1) {
-                if (!setTried.count(vvTried[n][i]))
-                    return -11;
-                const auto it{mapInfo.find(vvTried[n][i])};
-                if (it == mapInfo.end() || it->second.GetTriedBucket(nKey, m_asmap) != n) {
-                    return -17;
-                }
-                if (it->second.GetBucketPosition(nKey, false, n) != i) {
-                    return -18;
-                }
-                setTried.erase(vvTried[n][i]);
-            }
+             if (vvTried[n][i] != -1) {
+                 if (!setTried.count(vvTried[n][i]))
+                     return -11;
+                 if (mapInfo[vvTried[n][i]].GetTriedBucket(nKey, m_asmap) != n)
+                     return -17;
+                 if (mapInfo[vvTried[n][i]].GetBucketPosition(nKey, false, n) != i)
+                     return -18;
+                 setTried.erase(vvTried[n][i]);
+             }
         }
     }
 
@@ -502,10 +460,8 @@ int CAddrMan::Check_() const
             if (vvNew[n][i] != -1) {
                 if (!mapNew.count(vvNew[n][i]))
                     return -12;
-                const auto it{mapInfo.find(vvNew[n][i])};
-                if (it == mapInfo.end() || it->second.GetBucketPosition(nKey, true, n) != i) {
+                if (mapInfo[vvNew[n][i]].GetBucketPosition(nKey, true, n) != i)
                     return -19;
-                }
                 if (--mapNew[vvNew[n][i]] == 0)
                     mapNew.erase(vvNew[n][i]);
             }
@@ -519,14 +475,12 @@ int CAddrMan::Check_() const
     if (nKey.IsNull())
         return -16;
 
-    LogPrint(BCLog::ADDRMAN, "Addrman checks completed successfully\n");
     return 0;
 }
+#endif
 
-void CAddrMan::GetAddr_(std::vector<CAddress>& vAddr, size_t max_addresses, size_t max_pct, std::optional<Network> network) const
+void CAddrMan::GetAddr_(std::vector<CAddress>& vAddr, size_t max_addresses, size_t max_pct)
 {
-    AssertLockHeld(cs);
-
     size_t nNodes = vRandom.size();
     if (max_pct != 0) {
         nNodes = max_pct * nNodes / 100;
@@ -536,32 +490,22 @@ void CAddrMan::GetAddr_(std::vector<CAddress>& vAddr, size_t max_addresses, size
     }
 
     // gather a list of random nodes, skipping those of low quality
-    const int64_t now{GetAdjustedTime()};
     for (unsigned int n = 0; n < vRandom.size(); n++) {
         if (vAddr.size() >= nNodes)
             break;
 
         int nRndPos = insecure_rand.randrange(vRandom.size() - n) + n;
         SwapRandom(n, nRndPos);
-        const auto it{mapInfo.find(vRandom[n])};
-        assert(it != mapInfo.end());
+        assert(mapInfo.count(vRandom[n]) == 1);
 
-        const CAddrInfo& ai{it->second};
-
-        // Filter by network (optional)
-        if (network != std::nullopt && ai.GetNetClass() != network) continue;
-
-        // Filter for quality
-        if (ai.IsTerrible(now)) continue;
-
-        vAddr.push_back(ai);
+        const CAddrInfo& ai = mapInfo[vRandom[n]];
+        if (!ai.IsTerrible())
+            vAddr.push_back(ai);
     }
 }
 
 void CAddrMan::Connected_(const CService& addr, int64_t nTime)
 {
-    AssertLockHeld(cs);
-
     CAddrInfo* pinfo = Find(addr);
 
     // if not found, bail out
@@ -582,8 +526,6 @@ void CAddrMan::Connected_(const CService& addr, int64_t nTime)
 
 void CAddrMan::SetServices_(const CService& addr, ServiceFlags nServices)
 {
-    AssertLockHeld(cs);
-
     CAddrInfo* pinfo = Find(addr);
 
     // if not found, bail out
@@ -602,8 +544,6 @@ void CAddrMan::SetServices_(const CService& addr, ServiceFlags nServices)
 
 void CAddrMan::ResolveCollisions_()
 {
-    AssertLockHeld(cs);
-
     for (std::set<int>::iterator it = m_tried_collisions.begin(); it != m_tried_collisions.end();) {
         int id_new = *it;
 
@@ -663,8 +603,6 @@ void CAddrMan::ResolveCollisions_()
 
 CAddrInfo CAddrMan::SelectTriedCollision_()
 {
-    AssertLockHeld(cs);
-
     if (m_tried_collisions.size() == 0) return CAddrInfo();
 
     std::set<int>::iterator it = m_tried_collisions.begin();
@@ -679,7 +617,7 @@ CAddrInfo CAddrMan::SelectTriedCollision_()
         return CAddrInfo();
     }
 
-    const CAddrInfo& newInfo = mapInfo[id_new];
+    CAddrInfo& newInfo = mapInfo[id_new];
 
     // which tried bucket to move the entry to
     int tried_bucket = newInfo.GetTriedBucket(nKey, m_asmap);
@@ -703,7 +641,7 @@ std::vector<bool> CAddrMan::DecodeAsmap(fs::path path)
     int length = ftell(filestr);
     LogPrintf("Opened asmap file %s (%d bytes) from disk\n", path, length);
     fseek(filestr, 0, SEEK_SET);
-    uint8_t cur_byte;
+    char cur_byte;
     for (int i = 0; i < length; ++i) {
         file >> cur_byte;
         for (int bit = 0; bit < 8; ++bit) {

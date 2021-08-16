@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2014-2020 The Bitcoin Core developers
+# Copyright (c) 2014-2019 The Bitkincoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test longpolling with getblocktemplate."""
@@ -8,8 +8,7 @@ from decimal import Decimal
 import random
 import threading
 
-from test_framework.blocktools import COINBASE_MATURITY
-from test_framework.test_framework import BitcoinTestFramework
+from test_framework.test_framework import BitkincoinTestFramework
 from test_framework.util import get_rpc_proxy
 from test_framework.wallet import MiniWallet
 
@@ -27,7 +26,7 @@ class LongpollThread(threading.Thread):
     def run(self):
         self.node.getblocktemplate({'longpollid': self.longpollid, 'rules': ['segwit']})
 
-class GetBlockTemplateLPTest(BitcoinTestFramework):
+class GetBlockTemplateLPTest(BitkincoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 2
         self.supports_cli = False
@@ -63,7 +62,7 @@ class GetBlockTemplateLPTest(BitcoinTestFramework):
         assert not thr.is_alive()
 
         # Add enough mature utxos to the wallets, so that all txs spend confirmed coins
-        self.nodes[0].generate(COINBASE_MATURITY)
+        self.nodes[0].generate(100)
         self.sync_blocks()
 
         self.log.info("Test that introducing a new transaction into the mempool will terminate the longpoll")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2014-2020 The Bitcoin Core developers
+# Copyright (c) 2014-2020 The Bitkincoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test mining RPCs
@@ -13,7 +13,6 @@ from decimal import Decimal
 
 from test_framework.blocktools import (
     create_coinbase,
-    get_witness_script,
     NORMAL_GBT_REQUEST_PARAMS,
     TIME_GENESIS_BLOCK,
 )
@@ -21,10 +20,9 @@ from test_framework.messages import (
     CBlock,
     CBlockHeader,
     BLOCK_HEADER_SIZE,
-    ser_uint256,
 )
 from test_framework.p2p import P2PDataStore
-from test_framework.test_framework import BitcoinTestFramework
+from test_framework.test_framework import BitkincoinTestFramework
 from test_framework.util import (
     assert_equal,
     assert_raises_rpc_error,
@@ -45,14 +43,11 @@ def assert_template(node, block, expect, rehash=True):
     assert_equal(rsp, expect)
 
 
-class MiningTest(BitcoinTestFramework):
+class MiningTest(BitkincoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 2
         self.setup_clean_chain = True
         self.supports_cli = False
-
-    def skip_test_if_missing_module(self):
-        self.skip_if_no_wallet()
 
     def mine_chain(self):
         self.log.info('Create some old blocks')
@@ -94,21 +89,7 @@ class MiningTest(BitcoinTestFramework):
         assert_equal(mining_info['networkhashps'], Decimal('0.003333333333333334'))
         assert_equal(mining_info['pooledtx'], 0)
 
-        self.log.info("getblocktemplate: Test default witness commitment")
-        txid = int(node.sendtoaddress(node.getnewaddress(), 1), 16)
-        tmpl = node.getblocktemplate(NORMAL_GBT_REQUEST_PARAMS)
-
-        # Check that default_witness_commitment is present.
-        assert 'default_witness_commitment' in tmpl
-        witness_commitment = tmpl['default_witness_commitment']
-
-        # Check that default_witness_commitment is correct.
-        witness_root = CBlock.get_merkle_root([ser_uint256(0),
-                                               ser_uint256(txid)])
-        script = get_witness_script(witness_root, 0)
-        assert_equal(witness_commitment, script.hex())
-
-        # Mine a block to leave initial block download and clear the mempool
+        # Mine a block to leave initial block download
         node.generatetoaddress(1, node.get_deterministic_priv_key().address)
         tmpl = node.getblocktemplate(NORMAL_GBT_REQUEST_PARAMS)
         self.log.info("getblocktemplate: Test capability advertised")

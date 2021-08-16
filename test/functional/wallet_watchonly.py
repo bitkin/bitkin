@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-# Copyright (c) 2018-2019 The Bitcoin Core developers
+# Copyright (c) 2018-2019 The Bitkincoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test createwallet watchonly arguments.
 """
 
-from test_framework.blocktools import COINBASE_MATURITY
-from test_framework.test_framework import BitcoinTestFramework
+from test_framework.test_framework import BitkincoinTestFramework
 from test_framework.util import (
     assert_equal,
     assert_raises_rpc_error
 )
 
 
-class CreateWalletWatchonlyTest(BitcoinTestFramework):
+class CreateWalletWatchonlyTest(BitkincoinTestFramework):
     def set_test_params(self):
+        self.setup_clean_chain = False
         self.num_nodes = 1
 
     def skip_test_if_missing_module(self):
@@ -37,7 +37,7 @@ class CreateWalletWatchonlyTest(BitcoinTestFramework):
         wo_wallet.importpubkey(pubkey=def_wallet.getaddressinfo(wo_change)['pubkey'])
 
         # generate some btc for testing
-        node.generatetoaddress(COINBASE_MATURITY + 1, a1)
+        node.generatetoaddress(101, a1)
 
         # send 1 btc to our watch-only address
         txid = def_wallet.sendtoaddress(wo_addr, 1)

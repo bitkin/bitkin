@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2020 The Bitcoin Core developers
+// Copyright (c) 2009-2019 The Bitkincoin Core developers
 // Copyright (c) 2017 The Zcash developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -7,13 +7,10 @@
 
 #include <crypto/common.h>
 #include <crypto/hmac_sha512.h>
-#include <hash.h>
 #include <random.h>
 
 #include <secp256k1.h>
-#include <secp256k1_extrakeys.h>
 #include <secp256k1_recovery.h>
-#include <secp256k1_schnorrsig.h>
 
 static secp256k1_context* secp256k1_context_sign = nullptr;
 
@@ -21,7 +18,7 @@ static secp256k1_context* secp256k1_context_sign = nullptr;
 
 /**
  * This parses a format loosely based on a DER encoding of the ECPrivateKey type from
- * section C.4 of SEC 1 <https://www.secg.org/sec1-v2.pdf>, with the following caveats:
+ * section C.4 of SEC 1 <http://www.secg.org/sec1-v2.pdf>, with the following caveats:
  *
  * * The octet-length of the SEQUENCE must be encoded as 1 or 2 octets. It is not
  *   required to be encoded as one octet if it is less than 256, as DER would require.
@@ -83,7 +80,7 @@ int ec_seckey_import_der(const secp256k1_context* ctx, unsigned char *out32, con
 
 /**
  * This serializes to a DER encoding of the ECPrivateKey type from section C.4 of SEC 1
- * <https://www.secg.org/sec1-v2.pdf>. The optional parameters and publicKey fields are
+ * <http://www.secg.org/sec1-v2.pdf>. The optional parameters and publicKey fields are
  * included.
  *
  * seckey must point to an output buffer of length at least CKey::SIZE bytes.
@@ -237,7 +234,7 @@ bool CKey::VerifyPubKey(const CPubKey& pubkey) const {
         return false;
     }
     unsigned char rnd[8];
-    std::string str = "Bitcoin key verification\n";
+    std::string str = "Bitkincoin key verification\n";
     GetRandBytes(rnd, sizeof(rnd));
     uint256 hash;
     CHash256().Write(MakeUCharSpan(str)).Write(rnd).Finalize(hash);
@@ -259,24 +256,6 @@ bool CKey::SignCompact(const uint256 &hash, std::vector<unsigned char>& vchSig) 
     assert(rec != -1);
     vchSig[0] = 27 + rec + (fCompressed ? 4 : 0);
     return true;
-}
-
-bool CKey::SignSchnorr(const uint256& hash, Span<unsigned char> sig, const uint256* merkle_root, const uint256* aux) const
-{
-    assert(sig.size() == 64);
-    secp256k1_keypair keypair;
-    if (!secp256k1_keypair_create(secp256k1_context_sign, &keypair, begin())) return false;
-    if (merkle_root) {
-        secp256k1_xonly_pubkey pubkey;
-        if (!secp256k1_keypair_xonly_pub(secp256k1_context_sign, &pubkey, nullptr, &keypair)) return false;
-        unsigned char pubkey_bytes[32];
-        if (!secp256k1_xonly_pubkey_serialize(secp256k1_context_sign, pubkey_bytes, &pubkey)) return false;
-        uint256 tweak = XOnlyPubKey(pubkey_bytes).ComputeTapTweakHash(merkle_root->IsNull() ? nullptr : merkle_root);
-        if (!secp256k1_keypair_xonly_tweak_add(GetVerifyContext(), &keypair, tweak.data())) return false;
-    }
-    bool ret = secp256k1_schnorrsig_sign(secp256k1_context_sign, sig.data(), hash.data(), &keypair, aux ? (unsigned char*)aux->data() : nullptr);
-    memory_cleanse(&keypair, sizeof(keypair));
-    return ret;
 }
 
 bool CKey::Load(const CPrivKey &seckey, const CPubKey &vchPubKey, bool fSkipCheck=false) {
@@ -314,7 +293,7 @@ bool CKey::Derive(CKey& keyChild, ChainCode &ccChild, unsigned int nChild, const
 bool CExtKey::Derive(CExtKey &out, unsigned int _nChild) const {
     out.nDepth = nDepth + 1;
     CKeyID id = key.GetPubKey().GetID();
-    memcpy(out.vchFingerprint, &id, 4);
+    memcpy(&out.vchFingerprint[0], &id, 4);
     out.nChild = _nChild;
     return key.Derive(out.key, out.chaincode, _nChild, chaincode);
 }
@@ -333,7 +312,7 @@ void CExtKey::SetSeed(const unsigned char *seed, unsigned int nSeedLen) {
 CExtPubKey CExtKey::Neuter() const {
     CExtPubKey ret;
     ret.nDepth = nDepth;
-    memcpy(ret.vchFingerprint, vchFingerprint, 4);
+    memcpy(&ret.vchFingerprint[0], &vchFingerprint[0], 4);
     ret.nChild = nChild;
     ret.pubkey = key.GetPubKey();
     ret.chaincode = chaincode;

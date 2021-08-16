@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2017-2020 The Bitcoin Core developers
+# Copyright (c) 2017-2019 The Bitkincoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test recovery from a crash during chainstate writing.
@@ -36,17 +36,20 @@ from test_framework.messages import (
     CTransaction,
     CTxIn,
     CTxOut,
+    ToHex,
 )
-from test_framework.test_framework import BitcoinTestFramework
+from test_framework.test_framework import BitkincoinTestFramework
 from test_framework.util import (
     assert_equal,
     create_confirmed_utxos,
+    hex_str_to_bytes,
 )
 
 
-class ChainstateWriteCrashTest(BitcoinTestFramework):
+class ChainstateWriteCrashTest(BitkincoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 4
+        self.setup_clean_chain = False
         self.rpc_timeout = 480
         self.supports_cli = False
 
@@ -91,14 +94,14 @@ class ChainstateWriteCrashTest(BitcoinTestFramework):
                 return utxo_hash
             except:
                 # An exception here should mean the node is about to crash.
-                # If bitcoind exits, then try again.  wait_for_node_exit()
-                # should raise an exception if bitcoind doesn't exit.
+                # If bitkincoind exits, then try again.  wait_for_node_exit()
+                # should raise an exception if bitkincoind doesn't exit.
                 self.wait_for_node_exit(node_index, timeout=10)
             self.crashed_on_restart += 1
             time.sleep(1)
 
-        # If we got here, bitcoind isn't coming back up on restart.  Could be a
-        # bug in bitcoind, or we've gotten unlucky with our dbcrash ratio --
+        # If we got here, bitkincoind isn't coming back up on restart.  Could be a
+        # bug in bitkincoind, or we've gotten unlucky with our dbcrash ratio --
         # perhaps we generated a test case that blew up our cache?
         # TODO: If this happens a lot, we should try to restart without -dbcrashratio
         # and make sure that recovery happens.
@@ -203,10 +206,10 @@ class ChainstateWriteCrashTest(BitcoinTestFramework):
                 continue
 
             for _ in range(3):
-                tx.vout.append(CTxOut(output_amount, bytes.fromhex(utxo['scriptPubKey'])))
+                tx.vout.append(CTxOut(output_amount, hex_str_to_bytes(utxo['scriptPubKey'])))
 
             # Sign and send the transaction to get into the mempool
-            tx_signed_hex = node.signrawtransactionwithwallet(tx.serialize().hex())['hex']
+            tx_signed_hex = node.signrawtransactionwithwallet(ToHex(tx))['hex']
             node.sendrawtransaction(tx_signed_hex)
             num_transactions += 1
 

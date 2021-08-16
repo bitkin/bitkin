@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-# Copyright (c) 2017-2019 The Bitcoin Core developers
+# Copyright (c) 2017-2019 The Bitkincoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #
 # Test getblockstats rpc call
 #
-
-from test_framework.blocktools import COINBASE_MATURITY
-from test_framework.test_framework import BitcoinTestFramework
+from test_framework.test_framework import BitkincoinTestFramework
 from test_framework.util import (
     assert_equal,
     assert_raises_rpc_error,
@@ -18,7 +16,7 @@ import os
 
 TESTSDIR = os.path.dirname(os.path.realpath(__file__))
 
-class GetblockstatsTest(BitcoinTestFramework):
+class GetblockstatsTest(BitkincoinTestFramework):
 
     start_height = 101
     max_stat_pos = 2
@@ -43,7 +41,7 @@ class GetblockstatsTest(BitcoinTestFramework):
     def generate_test_data(self, filename):
         mocktime = 1525107225
         self.nodes[0].setmocktime(mocktime)
-        self.nodes[0].generate(COINBASE_MATURITY + 1)
+        self.nodes[0].generate(101)
 
         address = self.nodes[0].get_deterministic_priv_key().address
         self.nodes[0].sendtoaddress(address=address, amount=10, subtractfeefromamount=True)

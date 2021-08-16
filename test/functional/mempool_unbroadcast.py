@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2017-2020 The Bitcoin Core developers
+# Copyright (c) 2017-2020 The Bitkincoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test that the mempool ensures transaction delivery by periodically sending
@@ -8,7 +8,7 @@ to peers until a GETDATA is received."""
 import time
 
 from test_framework.p2p import P2PTxInvStore
-from test_framework.test_framework import BitcoinTestFramework
+from test_framework.test_framework import BitkincoinTestFramework
 from test_framework.util import (
     assert_equal,
     create_confirmed_utxos,
@@ -16,7 +16,7 @@ from test_framework.util import (
 
 MAX_INITIAL_BROADCAST_DELAY = 15 * 60 # 15 minutes in seconds
 
-class MempoolUnbroadcastTest(BitcoinTestFramework):
+class MempoolUnbroadcastTest(BitkincoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 2
 
@@ -91,12 +91,6 @@ class MempoolUnbroadcastTest(BitcoinTestFramework):
 
         self.disconnect_nodes(0, 1)
         node.disconnect_p2ps()
-
-        self.log.info("Rebroadcast transaction and ensure it is not added to unbroadcast set when already in mempool")
-        rpc_tx_hsh = node.sendrawtransaction(txFS["hex"])
-        mempool = node.getrawmempool(True)
-        assert rpc_tx_hsh in mempool
-        assert not mempool[rpc_tx_hsh]['unbroadcast']
 
     def test_txn_removal(self):
         self.log.info("Test that transactions removed from mempool are removed from unbroadcast set")

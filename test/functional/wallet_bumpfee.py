@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2016-2020 The Bitcoin Core developers
+# Copyright (c) 2016-2020 The Bitkincoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test the bumpfee RPC.
@@ -14,23 +14,16 @@ added in the future, they should try to follow the same convention and not
 make assumptions about execution order.
 """
 from decimal import Decimal
+import io
 
-from test_framework.blocktools import (
-    COINBASE_MATURITY,
-    add_witness_commitment,
-    create_block,
-    create_coinbase,
-    send_to_witness,
-)
-from test_framework.messages import (
-    BIP125_SEQUENCE_NUMBER,
-    tx_from_hex,
-)
-from test_framework.test_framework import BitcoinTestFramework
+from test_framework.blocktools import add_witness_commitment, create_block, create_coinbase, send_to_witness
+from test_framework.messages import BIP125_SEQUENCE_NUMBER, CTransaction
+from test_framework.test_framework import BitkincoinTestFramework
 from test_framework.util import (
     assert_equal,
     assert_greater_than,
     assert_raises_rpc_error,
+    hex_str_to_bytes,
 )
 
 WALLET_PASSPHRASE = "test"
@@ -44,7 +37,7 @@ HIGH         =    500
 TOO_HIGH     = 100000
 
 
-class BumpFeeTest(BitcoinTestFramework):
+class BumpFeeTest(BitkincoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 2
         self.setup_clean_chain = True
@@ -117,24 +110,13 @@ class BumpFeeTest(BitcoinTestFramework):
         assert_raises_rpc_error(-8, "Insufficient total fee 0.00000141", rbf_node.bumpfee, rbfid, {"fee_rate": INSUFFICIENT})
 
         self.log.info("Test invalid fee rate settings")
+        assert_raises_rpc_error(-8, "Insufficient total fee 0.00", rbf_node.bumpfee, rbfid, {"fee_rate": 0})
         assert_raises_rpc_error(-4, "Specified or calculated fee 0.141 is too high (cannot be higher than -maxtxfee 0.10",
             rbf_node.bumpfee, rbfid, {"fee_rate": TOO_HIGH})
-        # Test fee_rate with zero values.
-        msg = "Insufficient total fee 0.00"
-        for zero_value in [0, 0.000, 0.00000000, "0", "0.000", "0.00000000"]:
-            assert_raises_rpc_error(-8, msg, rbf_node.bumpfee, rbfid, {"fee_rate": zero_value})
-        msg = "Invalid amount"
-        # Test fee_rate values that don't pass fixed-point parsing checks.
-        for invalid_value in ["", 0.000000001, 1e-09, 1.111111111, 1111111111111111, "31.999999999999999999999"]:
-            assert_raises_rpc_error(-3, msg, rbf_node.bumpfee, rbfid, {"fee_rate": invalid_value})
-        # Test fee_rate values that cannot be represented in sat/vB.
-        for invalid_value in [0.0001, 0.00000001, 0.00099999, 31.99999999, "0.0001", "0.00000001", "0.00099999", "31.99999999"]:
-            assert_raises_rpc_error(-3, msg, rbf_node.bumpfee, rbfid, {"fee_rate": invalid_value})
-        # Test fee_rate out of range (negative number).
         assert_raises_rpc_error(-3, "Amount out of range", rbf_node.bumpfee, rbfid, {"fee_rate": -1})
-        # Test type error.
         for value in [{"foo": "bar"}, True]:
             assert_raises_rpc_error(-3, "Amount is not a number or string", rbf_node.bumpfee, rbfid, {"fee_rate": value})
+        assert_raises_rpc_error(-3, "Invalid amount", rbf_node.bumpfee, rbfid, {"fee_rate": ""})
 
         self.log.info("Test explicit fee rate raises RPC error if both fee_rate and conf_target are passed")
         assert_raises_rpc_error(-8, "Cannot specify both conf_target and fee_rate. Please provide either a confirmation "
@@ -153,7 +135,7 @@ class BumpFeeTest(BitcoinTestFramework):
         for k, v in {"number": 42, "object": {"foo": "bar"}}.items():
             assert_raises_rpc_error(-3, "Expected type string for estimate_mode, got {}".format(k),
                 rbf_node.bumpfee, rbfid, {"estimate_mode": v})
-        for mode in ["foo", Decimal("3.1415"), "sat/B", "BTC/kB"]:
+        for mode in ["foo", Decimal("3.1415"), "sat/B", "BTK/kB"]:
             assert_raises_rpc_error(-8, 'Invalid estimate_mode parameter, must be one of: "unset", "economical", "conservative"',
                 rbf_node.bumpfee, rbfid, {"estimate_mode": mode})
 
@@ -272,7 +254,7 @@ def test_small_output_with_feerate_succeeds(self, rbf_node, dest_address):
     self.log.info('Testing small output with feerate bump succeeds')
 
     # Make sure additional inputs exist
-    rbf_node.generatetoaddress(COINBASE_MATURITY + 1, rbf_node.getnewaddress())
+    rbf_node.generatetoaddress(101, rbf_node.getnewaddress())
     rbfid = spend_one_input(rbf_node, dest_address)
     input_list = rbf_node.getrawtransaction(rbfid, 1)["vin"]
     assert_equal(len(input_list), 1)
@@ -314,16 +296,16 @@ def test_dust_to_fee(self, rbf_node, dest_address):
     self.log.info('Test that bumped output that is dust is dropped to fee')
     rbfid = spend_one_input(rbf_node, dest_address)
     fulltx = rbf_node.getrawtransaction(rbfid, 1)
-    # The DER formatting used by Bitcoin to serialize ECDSA signatures means that signatures can have a
+    # The DER formatting used by Bitkincoin to serialize ECDSA signatures means that signatures can have a
     # variable size of 70-72 bytes (or possibly even less), with most being 71 or 72 bytes. The signature
     # in the witness is divided by 4 for the vsize, so this variance can take the weight across a 4-byte
     # boundary. Thus expected transaction size (p2wpkh, 1 input, 2 outputs) is 140-141 vbytes, usually 141.
     if not 140 <= fulltx["vsize"] <= 141:
         raise AssertionError("Invalid tx vsize of {} (140-141 expected), full tx: {}".format(fulltx["vsize"], fulltx))
     # Bump with fee_rate of 350.25 sat/vB vbytes to create dust.
-    # Expected fee is 141 vbytes * fee_rate 0.00350250 BTC / 1000 vbytes = 0.00049385 BTC.
-    # or occasionally 140 vbytes * fee_rate 0.00350250 BTC / 1000 vbytes = 0.00049035 BTC.
-    # Dust should be dropped to the fee, so actual bump fee is 0.00050000 BTC.
+    # Expected fee is 141 vbytes * fee_rate 0.00350250 BTK / 1000 vbytes = 0.00049385 BTK.
+    # or occasionally 140 vbytes * fee_rate 0.00350250 BTK / 1000 vbytes = 0.00049035 BTK.
+    # Dust should be dropped to the fee, so actual bump fee is 0.00050000 BTK.
     bumped_tx = rbf_node.bumpfee(rbfid, {"fee_rate": 350.25})
     full_bumped_tx = rbf_node.getrawtransaction(bumped_tx["txid"], 1)
     assert_equal(bumped_tx["fee"], Decimal("0.00050000"))
@@ -360,7 +342,7 @@ def test_settxfee(self, rbf_node, dest_address):
 def test_maxtxfee_fails(self, rbf_node, dest_address):
     self.log.info('Test that bumpfee fails when it hits -maxtxfee')
     # size of bumped transaction (p2wpkh, 1 input, 2 outputs): 141 vbytes
-    # expected bump fee of 141 vbytes * 0.00200000 BTC / 1000 vbytes = 0.00002820 BTC
+    # expected bump fee of 141 vbytes * 0.00200000 BTK / 1000 vbytes = 0.00002820 BTK
     # which exceeds maxtxfee and is expected to raise
     self.restart_node(1, ['-maxtxfee=0.000025'] + self.extra_args[1])
     rbf_node.walletpassphrase(WALLET_PASSPHRASE, WALLET_PASSPHRASE_TIMEOUT)
@@ -442,9 +424,6 @@ def test_watchonly_psbt(self, peer_node, rbf_node, dest_address):
     psbt_final = watcher.finalizepsbt(psbt_signed["psbt"])
     original_txid = watcher.sendrawtransaction(psbt_final["hex"])
     assert_equal(len(watcher.decodepsbt(psbt)["tx"]["vin"]), 1)
-
-    # bumpfee can't be used on watchonly wallets
-    assert_raises_rpc_error(-4, "bumpfee is not available with wallets that have private keys disabled. Use psbtbumpfee instead.", watcher.bumpfee, original_txid)
 
     # Bump fee, obnoxiously high to add additional watchonly input
     bumped_psbt = watcher.psbtbumpfee(original_txid, {"fee_rate": HIGH})
@@ -553,7 +532,7 @@ def test_change_script_match(self, rbf_node, dest_address):
 
     def get_change_address(tx):
         tx_details = rbf_node.getrawtransaction(tx, 1)
-        txout_addresses = [txout['scriptPubKey']['address'] for txout in tx_details["vout"]]
+        txout_addresses = [txout['scriptPubKey']['addresses'][0] for txout in tx_details["vout"]]
         return [address for address in txout_addresses if rbf_node.getaddressinfo(address)["ischange"]]
 
     # Check that there is only one change output
@@ -582,7 +561,9 @@ def spend_one_input(node, dest_address, change_size=Decimal("0.00049000")):
 
 
 def submit_block_with_tx(node, tx):
-    ctx = tx_from_hex(tx)
+    ctx = CTransaction()
+    ctx.deserialize(io.BytesIO(hex_str_to_bytes(tx)))
+
     tip = node.getbestblockhash()
     height = node.getblockcount() + 1
     block_time = node.getblockheader(tip)["mediantime"] + 1

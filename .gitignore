@@ -2,17 +2,17 @@
 
 *.exe
 *.pdb
-src/bitcoin
-src/bitcoind
-src/bitcoin-cli
-src/bitcoin-gui
-src/bitcoin-node
-src/bitcoin-tx
-src/bitcoin-util
-src/bitcoin-wallet
-src/test/fuzz/fuzz
-src/test/test_bitcoin
-src/qt/test/test_bitcoin-qt
+src/bitkincoin
+src/bitkincoind
+src/bitkincoin-cli
+src/bitkincoin-gui
+src/bitkincoin-node
+src/bitkincoin-tx
+src/bitkincoin-wallet
+src/test/fuzz/*
+!src/test/fuzz/*.*
+src/test/test_bitkincoin
+src/qt/test/test_bitkincoin-qt
 
 # autoreconf
 Makefile.in
@@ -36,8 +36,8 @@ config.log
 config.status
 configure
 libtool
-src/config/bitcoin-config.h
-src/config/bitcoin-config.h.in
+src/config/bitkincoin-config.h
+src/config/bitkincoin-config.h.in
 src/config/stamp-h1
 src/obj
 share/setup.nsi
@@ -51,17 +51,17 @@ src/qt/forms/ui_*.h
 
 src/qt/test/moc*.cpp
 
-src/qt/bitcoin-qt.config
-src/qt/bitcoin-qt.creator
-src/qt/bitcoin-qt.creator.user
-src/qt/bitcoin-qt.files
-src/qt/bitcoin-qt.includes
+src/qt/bitkincoin-qt.config
+src/qt/bitkincoin-qt.creator
+src/qt/bitkincoin-qt.creator.user
+src/qt/bitkincoin-qt.files
+src/qt/bitkincoin-qt.includes
 
 .deps
 .dirstamp
 .libs
 .*.swp
-*~
+*.*~*
 *.bak
 *.rej
 *.orig
@@ -76,7 +76,6 @@ src/qt/bitcoin-qt.includes
 *.log
 *.trs
 *.dmg
-*.iso
 
 *.json.h
 *.raw.h
@@ -93,8 +92,8 @@ src/qt/bitcoin-qt.includes
 *.qm
 Makefile
 !depends/Makefile
-src/qt/bitcoin-qt
-Bitcoin-Qt.app
+src/qt/bitkincoin-qt
+Bitkincoin-Qt.app
 background.tiff*
 
 # Qt Creator
@@ -102,7 +101,7 @@ Makefile.am.user
 
 # Unit-tests
 Makefile.test
-bitcoin-qt_test
+bitkincoin-qt_test
 
 # Resources cpp
 qrc_*.cpp
@@ -118,7 +117,7 @@ releases
 *.gcno
 *.gcda
 /*.info
-test_bitcoin.coverage/
+test_bitkincoin.coverage/
 total.coverage/
 fuzz.coverage/
 coverage_percent.txt
@@ -137,7 +136,7 @@ test/.mypy_cache/
 
 /doc/doxygen/
 
-libbitcoinconsensus.pc
+libbitkincoinconsensus.pc
 contrib/devtools/split-debug.sh
 
 # Output from running db4 installation
@@ -149,5 +148,3 @@ db4/
 osx_volname
 dist/
 *.background.tiff
-
-/guix-build-*
