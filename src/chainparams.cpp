@@ -93,18 +93,18 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nTimeout = 1631274308; // August 11th, 2021
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].min_activation_height = 128000;
 
-        consensus.nMinimumChainWork = uint256S("0x0");
-        consensus.defaultAssumeValid = uint256S("0x00000047e4e7edf6925c02dcb7f3d6e94d68df0fbe46cbb6d41ac4c1396a39f5");
+        consensus.nMinimumChainWork = uint256S("0x000000000000000000000000000000000000000000000007d1c8a64f93d6d626");
+        consensus.defaultAssumeValid = uint256S("0x0000000000000351a0504d2d97dfdc6c91089cd7e610f6a7a5768d5548e842ad");
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
          * a large 32-bit integer with any alignment.
          */
-        pchMessageStart[0] = 0x2A;
-        pchMessageStart[1] = 0xFE;
-        pchMessageStart[2] = 0x7B;
-        pchMessageStart[3] = 0x43;
+        pchMessageStart[0] = 0x4d; // M
+        pchMessageStart[1] = 0x42; // B
+        pchMessageStart[2] = 0x54; // T
+        pchMessageStart[3] = 0x4b; // K
         nDefaultPort = 8666;
         nPruneAfterHeight = 100000;
         m_assumed_blockchain_size = 350;
@@ -138,19 +138,23 @@ public:
         checkpointData = {
             {
                 { 0, uint256S("00000047e4e7edf6925c02dcb7f3d6e94d68df0fbe46cbb6d41ac4c1396a39f5")},
-                { 1101, uint256S("0x0000514112eeb391c84981c404b40375934410273efacc5c9b1a8280eab21dbc")},
-                { 10501, uint256S("0x0000063c1d68fc141cb5e5af467cb56d9e19e0526f9b1eae67f2c0997a15e720")},
-                {51000, uint256S("0x0000000cbfe668739835ef3ecc5c8b4b1ded5de2152342aed36f1af3a66c4b45")},
-                {123456, uint256S("0x00000005159008cc8c351daf791f16e7e7cdf6e5d7a6aa58d1ebfd6c866f836a")},
+                { 1234, uint256S("0x000041672e8572a30f33a0802067fed2513c78ca1af828fd5b11825a57fc3d27")},
+                { 5198, uint256S("0x0000fbd4278d3bd2452b2c44dfb07a84b45d18da74acf2400d914d834fbbf943")},
+                {51001, uint256S("0x00000004966d07bc4fbecce6cf130c9942cdc1ff4931b689d47a717208f868ed")},
+                {79416, uint256S("0x00000000bfad179f7c58c2aa0601b97acf470b659be6a7a24f4baca018f36110")},
+                {121001, uint256S("0x0000000000000520a5d70b16531e41c226a9fc32a2a78ae15cf7fbf16d4eb588")},
+                {151001, uint256S("0x000000000000146dec7ca1c6c9817394ec7f6473bbeb7b5aeb41caa59e119343")},
+                {185231, uint256S("0x0000000000003ed656e0cdd6a64ece1f061e7bde9ded8b0025e7525e709ede43")},
+                {201498, uint256S("0x0000000000000351a0504d2d97dfdc6c91089cd7e610f6a7a5768d5548e842ad")},
                 
             }
         };
 
         chainTxData = ChainTxData{
-            // Data from RPC: getchaintxstats 4096 0000000000000000000b9d2ec5a352ecba0592946514a92f14319dc2b367fc72
-            /* nTime    */ 1608667028,
-            /* nTxCount */ 1,
-            /* dTxRate  */ 0.1,
+            // Data from RPC: getchaintxstats 201498 0000000000000351a0504d2d97dfdc6c91089cd7e610f6a7a5768d5548e842ad
+            /* nTime    */ 1635944609,
+            /* nTxCount */ 230650,
+            /* dTxRate  */ 0.01720239639343709,
         };
     }
 };
